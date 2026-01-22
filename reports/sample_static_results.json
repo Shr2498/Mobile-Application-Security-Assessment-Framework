@@ -1,0 +1,50 @@
+{
+    "basic_info": {
+        "file_size": 15728640,
+        "md5_hash": "a1b2c3d4e5f6789012345678901234567890abcd",
+        "sha256_hash": "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+        "bundle_id": "com.example.sampleapp",
+        "app_version": "1.2.3",
+        "display_name": "Sample Mobile App",
+        "minimum_os": "13.0"
+    },
+    "security_findings": [
+        {
+            "severity": "HIGH",
+            "description": "Hardcoded API key found in application binary",
+            "masvs_category": "MASVS-STORAGE-1"
+        },
+        {
+            "severity": "HIGH",
+            "description": "App Transport Security globally disabled",
+            "masvs_category": "MASVS-NETWORK-1"
+        },
+        {
+            "severity": "MEDIUM",
+            "description": "Weak SSL/TLS configuration detected",
+            "masvs_category": "MASVS-NETWORK-1"
+        },
+        {
+            "severity": "MEDIUM",
+            "description": "Debug provisioning profile detected",
+            "masvs_category": "MASVS-RESILIENCE-1"
+        },
+        {
+            "severity": "MEDIUM",
+            "description": "Third-party framework detected: AFNetworking - Potentially outdated networking framework",
+            "masvs_category": "MASVS-CODE-1"
+        },
+        {
+            "severity": "LOW",
+            "description": "No file protection configuration detected",
+            "masvs_category": "MASVS-STORAGE-1"
+        }
+    ],
+    "masvs_compliance": {
+        "MASVS-STORAGE-1": 2,
+        "MASVS-NETWORK-1": 2,
+        "MASVS-CODE-1": 1,
+        "MASVS-RESILIENCE-1": 1
+    },
+    "risk_score": 72
+}

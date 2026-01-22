@@ -48,6 +48,36 @@ class iOSStaticAnalyzer:
             'CC_SHA1',
             'kSecAttrAccessibleAlways',
             'kSecAttrAccessibleAlwaysThisDeviceOnly',
+            'SecRandomCopyBytes',
+            'arc4random',
+            'NSURLConnection',
+            'allowsAnyHTTPSCertificate',
+            'setAllowsAnyHTTPSCertificate',
+            'canAuthenticateAgainstProtectionSpace',
+            'continueWithoutCredentialForAuthenticationChallenge',
+            'kCFStreamSSLAllowsExpiredCertificates',
+            'kCFStreamSSLAllowsAnyRoot',
+            'kCFStreamSSLValidatesCertificateChain',
+            'NSURLSessionConfiguration',
+            'URLSession:didReceiveChallenge:completionHandler'
+        ]
+        
+        self.weak_crypto_patterns = [
+            'DES_',
+            'RC4_',
+            'MD5',
+            'SHA1',
+            'ECB',
+            'kSecAttrKeyTypeRC',
+            'kCCAlgorithmDES',
+            'kCCAlgorithmRC4'
+        ]
+        
+        self.file_protection_levels = [
+            'NSFileProtectionNone',
+            'NSFileProtectionComplete',
+            'NSFileProtectionCompleteUnlessOpen',
+            'NSFileProtectionCompleteUntilFirstUserAuthentication'
             'NSAllowsArbitraryLoads',
             'sqlite3_exec'
         ]
@@ -598,6 +628,106 @@ class iOSStaticAnalyzer:
                 print("  Risk Level: MEDIUM")
             else:
                 print("  Risk Level: LOW")
+    
+    def _analyze_data_protection(self):
+        """Analyze data protection implementation"""
+        try:
+            plist = self.findings['basic_info'].get('info_plist', {})
+            
+            # Check for file protection settings
+            if 'NSFileProtectionComplete' not in str(plist):
+                self._add_finding("MEDIUM", 
+                                "No file protection configuration detected",
+                                "MASVS-STORAGE-1")
+            
+            # Check for keychain access groups
+            if plist.get('keychain-access-groups'):
+                keychain_groups = plist['keychain-access-groups']
+                if isinstance(keychain_groups, list) and len(keychain_groups) > 3:
+                    self._add_finding("MEDIUM", 
+                                    "Multiple keychain access groups defined",
+                                    "MASVS-STORAGE-1")
+            
+            # Check for Core Data usage
+            with zipfile.ZipFile(self.ipa_path, 'r') as ipa:
+                file_list = ipa.namelist()
+                core_data_files = [f for f in file_list if f.endswith('.xcdatamodel') or f.endswith('.sqlite')]
+                
+                if core_data_files:
+                    self._add_finding("INFO", 
+                                    f"Core Data files detected: {len(core_data_files)}",
+                                    "MASVS-STORAGE-1")
+                    
+        except Exception as e:
+            self._add_finding("ERROR", f"Failed to analyze data protection: {str(e)}")
+    
+    def _analyze_code_signing(self):
+        """Analyze code signing and provisioning profile"""
+        try:
+            with zipfile.ZipFile(self.ipa_path, 'r') as ipa:
+                # Look for provisioning profile
+                provisioning_files = [f for f in ipa.namelist() if f.endswith('.mobileprovision')]
+                
+                if not provisioning_files:
+                    self._add_finding("HIGH", 
+                                    "No provisioning profile found",
+                                    "MASVS-RESILIENCE-1")
+                    return
+                
+                # Analyze provisioning profile (basic check)
+                for prov_file in provisioning_files:
+                    try:
+                        prov_data = ipa.read(prov_file).decode('utf-8', errors='ignore')
+                        
+                        if 'get-task-allow' in prov_data and '<true/>' in prov_data:
+                            self._add_finding("HIGH", 
+                                            "Debug provisioning profile detected",
+                                            "MASVS-RESILIENCE-1")
+                        
+                        if 'aps-environment' in prov_data:
+                            if 'development' in prov_data:
+                                self._add_finding("MEDIUM", 
+                                                "Development push notification environment",
+                                                "MASVS-PLATFORM-1")
+                    except:
+                        continue
+                        
+        except Exception as e:
+            self._add_finding("ERROR", f"Failed to analyze code signing: {str(e)}")
+    
+    def _analyze_third_party_libraries(self):
+        """Analyze third-party libraries and frameworks"""
+        try:
+            with zipfile.ZipFile(self.ipa_path, 'r') as ipa:
+                file_list = ipa.namelist()
+                
+                # Look for common third-party frameworks
+                frameworks = [f for f in file_list if '/Frameworks/' in f and f.endswith('.framework/')]
+                
+                vulnerable_frameworks = {
+                    'AFNetworking': 'Potentially outdated networking framework',
+                    'Alamofire': 'Swift networking framework - check version',
+                    'MagicalRecord': 'Core Data helper - potential data leaks',
+                    'FMDB': 'SQLite wrapper - check for SQL injection protection'
+                }
+                
+                for framework in frameworks:
+                    framework_name = framework.split('/')[-2].replace('.framework', '')
+                    
+                    if framework_name in vulnerable_frameworks:
+                        self._add_finding("MEDIUM", 
+                                        f"Third-party framework detected: {framework_name} - {vulnerable_frameworks[framework_name]}",
+                                        "MASVS-CODE-1")
+                
+                # Check for static libraries
+                static_libs = [f for f in file_list if f.endswith('.a')]
+                if static_libs:
+                    self._add_finding("INFO", 
+                                    f"Static libraries detected: {len(static_libs)}",
+                                    "MASVS-CODE-1")
+                    
+        except Exception as e:
+            self._add_finding("ERROR", f"Failed to analyze third-party libraries: {str(e)}")
 
 
 def main():

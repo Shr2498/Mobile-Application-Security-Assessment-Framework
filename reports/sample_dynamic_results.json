@@ -1,0 +1,40 @@
+{
+    "session_id": "session_20260122_demo",
+    "start_time": "2026-01-22T10:30:00",
+    "requests": [
+        {
+            "url": "https://api.example.com/login",
+            "method": "POST",
+            "timestamp": "2026-01-22T10:30:15"
+        },
+        {
+            "url": "http://insecure-api.example.com/data",
+            "method": "GET",
+            "timestamp": "2026-01-22T10:31:22"
+        }
+    ],
+    "security_findings": [
+        {
+            "severity": "HIGH",
+            "description": "Unencrypted HTTP request to insecure-api.example.com",
+            "masvs_category": "MASVS-NETWORK-1"
+        },
+        {
+            "severity": "MEDIUM",
+            "description": "Sensitive data detected in network request - password field",
+            "masvs_category": "MASVS-NETWORK-1"
+        },
+        {
+            "severity": "MEDIUM",
+            "description": "Missing security header: Content-Security-Policy",
+            "masvs_category": "MASVS-NETWORK-1"
+        }
+    ],
+    "statistics": {
+        "total_requests": 15,
+        "https_requests": 12,
+        "http_requests": 3,
+        "unique_hosts": 4,
+        "suspicious_requests": 3
+    }
+}
